@@ -5,13 +5,12 @@ pipeline {
     maven 'my_maven'
   }
   environment {
-    gitName = 'oolralra'
-    gitEmail = 'oolralra@gmail.com'
+    gitName = 'chaelynkang'
+    gitEmail = 'kchl1216@naver.com'
     githubCredential = 'git_cre'
-    dockerHubRegistry = '10.7.7.0:5000/sbimage'
-    githubWeb = 'https://github.com/oolralra/sb_code'
+    dockerHubRegistry = '10.7.7.14:5000/sbimage'
+    githubWeb = 'https://github.com/chaelynkang/sb_code.git'
   }
-
   stages {
     stage('Checkout Github') {
       steps {
@@ -26,6 +25,7 @@ pipeline {
         }
       }
     }
+
 
     stage('Maven Build') {
       steps {
@@ -55,15 +55,15 @@ pipeline {
         }
       }
     }
-    
+
     stage('Docker Image Push') {
       steps {
           
           
             sh "docker push ${dockerHubRegistry}:${currentBuild.number}"
             sh "docker push ${dockerHubRegistry}:latest"
-      }  
-      
+
+      }
       post {
       // docker push가 성공하든 실패하든 로컬의 도커이미지는 삭제.
         failure {
@@ -79,7 +79,23 @@ pipeline {
       }
     }
 
+    stage('Docker Container Deploy') {
+      steps {
+          sh "docker rm -f spring"
+          sh "docker run -dp 7979:8085 --name spring ${dockerHubRegistry}:${currentBuild.number}"
+          }
+      post {
+        failure {
+          echo 'Container Deploy failure'
+        }
+        success {
+          echo 'Container Deploy success'
+        }
+      }
+    }
 
-    
+
+
+
   }
 }
