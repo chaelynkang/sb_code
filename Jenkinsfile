@@ -11,6 +11,7 @@ pipeline {
     dockerHubRegistry = '10.7.7.14:5000/sbimage'
     githubWeb = 'https://github.com/chaelynkang/sb_code.git'
   }
+
    stages {
     stage('Checkout Github') {
       steps {
@@ -22,6 +23,73 @@ pipeline {
         }
         success {
           echo 'Repository clone success'  
+        }
+      }
+    }
+
+    stage('Maven Build') {
+      steps {
+          sh 'mvn clean install'
+      }
+      post {
+        failure {
+          echo 'Maven jar build failure'
+        }
+        success {
+          echo 'Maven jar build success'  
+        }
+      }
+    }
+
+    stage('Docker Image Build') {
+      steps {
+          sh "docker build -t ${dockerHubRegistry}:${currentBuild.number} ."
+          sh "docker build -t ${dockerHubRegistry}:latest ."
+          }
+      post {
+        failure {
+          echo 'Docker image build failure'
+        }
+        success {
+          echo 'Docker image build success'  
+        }
+      }
+    }
+    
+    stage('Docker Image Push') {
+      steps {
+          
+          
+            sh "docker push ${dockerHubRegistry}:${currentBuild.number}"
+            sh "docker push ${dockerHubRegistry}:latest"
+      }  
+      
+      post {
+      // docker push가 성공하든 실패하든 로컬의 도커이미지는 삭제.
+        failure {
+          echo 'Docker Image Push failure'
+          sh "docker rmi ${dockerHubRegistry}:${currentBuild.number}"
+          sh "docker rmi ${dockerHubRegistry}:latest"
+        }
+        success {
+          echo 'Docker Image Push success'
+          sh "docker rmi ${dockerHubRegistry}:${currentBuild.number}"
+          sh "docker rmi ${dockerHubRegistry}:latest"
+        }
+      }
+    }
+
+    stage('Docker Container Deploy') {
+      steps {
+          sh "docker rm -f spring"
+          sh "docker run -dp 7979:8085 --name spring ${dockerHubRegistry}:${currentBuild.number}"
+          }
+      post {
+        failure {
+          echo 'Container Deploy failure'
+        }
+        success {
+          echo 'Container Deploy success'
         }
       }
     }
